@@ -1,0 +1,112 @@
+import pygame
+import heapq
+import sys
+
+# Initialize Pygame
+pygame.init()
+
+# Set up some constants
+WIDTH, HEIGHT = 800, 600
+CELL_SIZE = 50
+
+# Create the game window
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+# Define colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+
+# Define the grid dimensions
+GRID_WIDTH = WIDTH // CELL_SIZE
+GRID_HEIGHT = HEIGHT // CELL_SIZE
+
+# Define the heuristic function
+def heuristic(a, b):
+    return abs(b - a) + abs(b - a)
+
+# Define the A* search function
+def a_star_search(graph, start, goal):
+    frontier = []
+    heapq.heappush(frontier, (0, start))
+    came_from = {start: None}
+    cost_so_far = {start: 0}
+    
+    while frontier:
+        _, current = heapq.heappop(frontier)
+        if current == goal:
+            break
+        
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            next = (current + dx, current + dy)
+            if (0 <= next < GRID_WIDTH and 0 <= next < GRID_HEIGHT and
+                next not in graph.walls):
+                new_cost = cost_so_far[current] + 1
+                if next not in cost_so_far or new_cost < cost_so_far[next]:
+                    cost_so_far[next] = new_cost
+                    priority = new_cost + heuristic(next, goal)
+                    heapq.heappush(frontier, (priority, next))
+                    came_from[next] = current
+    
+    return came_from, cost_so_far
+
+# Define the grid graph class
+class GridGraph:
+    def _init_(self, width, height):
+        self.width = width
+        self.height = height
+        self.walls = set()  # Set of wall coordinates
+
+    def add_wall(self, x, y):
+        self.walls.add((x, y))
+
+# Create a grid graph
+graph = GridGraph(GRID_WIDTH, GRID_HEIGHT)
+graph.add_wall(3, 3)
+graph.add_wall(3, 4)
+graph.add_wall(3, 5)
+
+# Define start and goal points
+start = (1, 1)
+goal = (8, 8)
+
+# Run the A* search algorithm
+came_from, cost_so_far = a_star_search(graph, start, goal)
+
+# Function to reconstruct the path
+def reconstruct_path(came_from, start, goal):
+    current = goal
+    path = []
+    while current != start:
+        path.append(current)
+        current = came_from[current]
+    path.append(start)
+    path.reverse()
+    return path
+
+path = reconstruct_path(came_from, start, goal)
+
+# Main game loop
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    screen.fill(WHITE)
+
+    # Draw walls
+    for x, y in graph.walls:
+        pygame.draw.rect(screen, BLACK, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+
+    # Draw path
+    for x, y in path:
+        pygame.draw.rect(screen, GREEN, (x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+
+    # Draw start and goal
+    pygame.draw.rect(screen, RED, (start * CELL_SIZE, start * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+    pygame.draw.rect(screen, BLUE, (goal * CELL_SIZE, goal * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+
+    pygame.display.update()
